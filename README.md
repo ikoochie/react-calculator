@@ -1,4 +1,6 @@
-![demo](https://i.imgur.com/wNbngSW.png)
+<p align="center">
+  <img src="https://i.imgur.com/6wj0hh6.jpg" alt="Project logo">
+</p>
 
 <h1 align="center">
   React Calculator
