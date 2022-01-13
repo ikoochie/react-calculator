@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import ScaleText from "react-scale-text";
 
 function CalculatorOutput({ value }) {
@@ -43,33 +43,39 @@ function App() {
   const [waiting, setWaiting] = useState(false);
   const [output, setOutput] = useState("0");
 
-  const handleDigit = (ckey) => {
-    if (waiting) {
-      setOutput(String(ckey));
-      setWaiting(false);
-    } else {
-      setOutput(output === "0" ? String(ckey) : output + ckey);
-    }
-  };
+  const handleDigit = useCallback(
+    (ckey) => {
+      if (waiting) {
+        setOutput(String(ckey));
+        setWaiting(false);
+      } else {
+        setOutput(output === "0" ? String(ckey) : output + ckey);
+      }
+    },
+    [output, waiting]
+  );
 
-  const handleClearOutput = () => {
+  const handleClearOutput = useCallback(() => {
     setValue(null);
     setOutput("0");
     setOperator(null);
     setWaiting(false);
-  };
+  }, []);
 
-  const handleDot = (ckey) => {
-    if (!/\./.test(output)) {
-      setOutput(output + ckey);
-    }
-  };
+  const handleDot = useCallback(
+    (ckey) => {
+      if (!/\./.test(output)) {
+        setOutput(output + ckey);
+      }
+    },
+    [output]
+  );
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     setOutput(output.substring(0, output.length - 1) || "0");
-  };
+  }, [output]);
 
-  const handlePercent = () => {
+  const handlePercent = useCallback(() => {
     const currentValue = parseFloat(output);
 
     if (currentValue === 0) return;
@@ -78,9 +84,9 @@ function App() {
     const newValue = parseFloat(output) / 100;
 
     setOutput(String(newValue.toFixed(fixedDigits.length + 2)));
-  };
+  }, [output]);
 
-  const handleSign = () => {
+  const handleSign = useCallback(() => {
     const currentValue = parseFloat(output);
 
     if (currentValue === 0) return;
@@ -88,24 +94,73 @@ function App() {
     const newValue = parseFloat(output) * -1;
 
     setOutput(String(newValue));
-  };
+  }, [output]);
 
-  const handleOperation = (nextOperator) => {
-    const inputValue = parseFloat(output);
+  const handleOperation = useCallback(
+    (nextOperator) => {
+      const inputValue = parseFloat(output);
 
-    if (value === null) {
-      setValue(inputValue);
-    } else if (operator) {
-      const currentValue = value || 0;
-      const newValue = CalculatorOperations[operator](currentValue, inputValue);
+      if (value === null) {
+        setValue(inputValue);
+      } else if (operator) {
+        const currentValue = value || 0;
+        const newValue = CalculatorOperations[operator](
+          currentValue,
+          inputValue
+        );
 
-      setValue(newValue || 0);
-      setOutput(String(newValue || 0));
-    }
+        setValue(newValue || 0);
+        setOutput(String(newValue || 0));
+      }
 
-    setWaiting(true);
-    setOperator(nextOperator);
-  };
+      setWaiting(true);
+      setOperator(nextOperator);
+    },
+    [operator, output, value]
+  );
+
+  const handleKeyPress = useCallback(
+    (event) => {
+      let { key } = event;
+
+      if (key === "Enter") key = "=";
+
+      if (/\d/.test(key)) {
+        event.preventDefault();
+        handleDigit(parseInt(key, 10));
+      } else if (key in CalculatorOperations) {
+        event.preventDefault();
+        handleOperation(key);
+      } else if (key === ".") {
+        event.preventDefault();
+        handleDot(".");
+      } else if (key === "%") {
+        event.preventDefault();
+        handlePercent();
+      } else if (key === "Backspace") {
+        event.preventDefault();
+        handleDelete();
+      } else if (key === "Clear" || key === "Delete") {
+        event.preventDefault();
+        handleClearOutput();
+      }
+    },
+    [
+      handleClearOutput,
+      handleDelete,
+      handleDigit,
+      handleDot,
+      handleOperation,
+      handlePercent,
+    ]
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyPress);
+    return () => {
+      window.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [handleKeyPress]);
 
   return (
     <div className="container">
